@@ -5,7 +5,7 @@ from .utils import render_activation_email
 
 
 def send_activation_email(user_id, activation_link):
-    """RQ-Job: versendet die Aktivierungs-E-Mail asynchron."""
+    """RQ job: sends the activation email asynchronously in the background."""
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
@@ -16,7 +16,7 @@ def send_activation_email(user_id, activation_link):
 
     html_message, plain_message = render_activation_email(user, activation_link)
     send_mail(
-        subject="Bitte bestätige deine E-Mail-Adresse",
+        subject="Please confirm your email address",
         message=plain_message,
         html_message=html_message,
         from_email=settings.DEFAULT_FROM_EMAIL,

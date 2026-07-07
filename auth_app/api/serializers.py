@@ -4,7 +4,8 @@ from rest_framework import serializers
 
 User = get_user_model()
 
-GENERIC_ERROR = "Bitte überprüfe deine Eingaben und versuche es erneut."
+# Generic error message for security reasons (no hints about which field failed)
+GENERIC_ERROR = "Please check your input and try again."
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -17,17 +18,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate_email(self, value):
+        """Reject duplicate emails without revealing that the email already exists."""
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError(GENERIC_ERROR)
         return value
 
     def validate(self, attrs):
+        """Check password confirmation match and password strength."""
         if attrs["password"] != attrs["confirmed_password"]:
             raise serializers.ValidationError({"confirmed_password": GENERIC_ERROR})
         self._validate_password_strength(attrs["password"])
         return attrs
 
     def _validate_password_strength(self, password):
+        """Run Django's built-in password validators."""
         try:
             validate_password(password)
         except serializers.ValidationError:

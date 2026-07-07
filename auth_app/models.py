@@ -1,7 +1,3 @@
-import uuid
-from datetime import timedelta
-
-from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -22,21 +18,3 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-
-
-class EmailVerificationToken(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="verification_tokens",
-    )
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    TOKEN_VALIDITY = timedelta(hours=24)
-
-    def is_valid(self):
-        return timezone.now() <= self.created_at + self.TOKEN_VALIDITY
-
-    def __str__(self):
-        return f"Token für {self.user.email}"
