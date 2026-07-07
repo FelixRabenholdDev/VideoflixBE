@@ -8,6 +8,8 @@ from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.templatetags.static import static
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
 User = get_user_model()
 
 
@@ -69,3 +71,29 @@ def render_password_reset_email(user, reset_link, logo_url):
     html_message = render_to_string("emails/password_reset.html", context)
     plain_message = strip_tags(html_message)
     return html_message, plain_message
+
+def set_auth_cookies(response, access_token, refresh_token):
+    """Attach the JWT access and refresh tokens as HttpOnly cookies."""
+    response.set_cookie(
+        "access_token",
+        access_token,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+    )
+    return response
+
+
+def build_login_payload(user):
+    """Build the response payload for a successful login."""
+    return {
+        "detail": "Login successful",
+        "user": {"id": user.id, "username": user.email},
+    }

@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from auth_app.jobs import send_activation_email
 from auth_app.utils import (
@@ -11,9 +12,11 @@ from auth_app.utils import (
     build_registration_response,
     get_user_from_uidb64,
     build_logo_url,
+    build_login_payload,
+    set_auth_cookies,
 )
 
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, LoginSerializer
 
 
 class RegisterView(APIView):
@@ -54,3 +57,19 @@ class ActivateAccountView(APIView):
             {"message": "Account successfully activated."},
             status=status.HTTP_200_OK,
         )
+
+    
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        return self._build_login_response(user)
+
+    def _build_login_response(self, user):
+        """Issue JWT tokens and attach them as HttpOnly cookies."""
+        refresh = RefreshToken.for_user(user)
+        response = Response(build_login_payload(user), status=status.HTTP_200_OK)
+        return set_auth_cookies(response, str(refresh.access_token), str(refresh))

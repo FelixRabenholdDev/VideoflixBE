@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
@@ -41,3 +41,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("confirmed_password")
         password = validated_data.pop("password")
         return User.objects.create_user(password=password, **validated_data)
+    
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        """Authenticate the user; Django's ModelBackend already rejects inactive users."""
+        request = self.context.get("request")
+        user = authenticate(request, email=attrs["email"], password=attrs["password"])
+        if user is None:
+            raise serializers.ValidationError(GENERIC_ERROR)
+        attrs["user"] = user
+        return attrs
