@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 User = get_user_model()
 
-# Generic error message for security reasons (no hints about which field failed)
+
 GENERIC_ERROR = "Please check your input and try again."
 
 
@@ -54,3 +54,7 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(GENERIC_ERROR)
         attrs["user"] = user
         return attrs
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()

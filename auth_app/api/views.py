@@ -1,4 +1,6 @@
 from django_rq import enqueue
+from django.contrib.auth import get_user_model
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -6,20 +8,23 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
-from auth_app.jobs import send_activation_email
+from auth_app.jobs import send_activation_email, send_password_reset_email
 from auth_app.utils import (
     account_activation_token,
     build_activation_link,
     build_registration_response,
     get_user_from_uidb64,
     build_logo_url,
+    build_password_reset_link,
     build_login_payload,
     set_auth_cookies,
     clear_auth_cookies,
     set_access_cookie,
 )
 
-from .serializers import RegisterSerializer, LoginSerializer
+from .serializers import RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer
+
+User = get_user_model()
 
 
 class RegisterView(APIView):
@@ -126,3 +131,25 @@ class TokenRefreshView(APIView):
             )
         response = Response({"detail": "Token refreshed", "access": new_access}, status=status.HTTP_200_OK)
         return set_access_cookie(response, new_access)
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self._send_reset_email_if_user_exists(serializer.validated_data["email"], request)
+        return Response(
+            {"detail": "An email has been sent to reset your password."},
+            status=status.HTTP_200_OK,
+        )
+
+    def _send_reset_email_if_user_exists(self, email, request):
+        """Silently do nothing if no matching user is found (avoid account enumeration)."""
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            return
+        link = build_password_reset_link(user)
+        logo_url = build_logo_url(request)
+        enqueue(send_password_reset_email, user.id, link, logo_url)
