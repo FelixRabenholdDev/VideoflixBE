@@ -1,10 +1,12 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.templatetags.static import static
 
 User = get_user_model()
 
@@ -17,6 +19,10 @@ class AccountActivationTokenGenerator(PasswordResetTokenGenerator):
 
 
 account_activation_token = AccountActivationTokenGenerator()
+
+def build_logo_url(request):
+    """Build the absolute URL to the Videoflix logo for use in emails."""
+    return request.build_absolute_uri(static("emails/logo.svg"))
 
 
 def build_activation_link(user):
@@ -35,9 +41,9 @@ def get_user_from_uidb64(uidb64):
         return None
 
 
-def render_activation_email(user, activation_link):
+def render_activation_email(user, activation_link, logo_url):
     """Render the HTML and plain text versions of the activation email."""
-    context = {"user": user, "activation_link": activation_link}
+    context = {"user": user, "activation_link": activation_link, "frontend_url": settings.FRONTEND_URL, "logo_url": logo_url,}
     html_message = render_to_string("emails/verify_email.html", context)
     plain_message = strip_tags(html_message)
     return html_message, plain_message
@@ -49,3 +55,17 @@ def build_registration_response(user, token):
         "user": {"id": user.id, "email": user.email},
         "token": token,
     }
+
+def build_password_reset_link(user):
+    """Build the password reset link containing uidb64 and token."""
+    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    return f"{settings.FRONTEND_URL}/reset-password/{uidb64}/{token}/"
+
+
+def render_password_reset_email(user, reset_link, logo_url):
+    """Render the HTML and plain text versions of the password reset email."""
+    context = {"reset_link": reset_link, "logo_url": logo_url}
+    html_message = render_to_string("emails/password_reset.html", context)
+    plain_message = strip_tags(html_message)
+    return html_message, plain_message

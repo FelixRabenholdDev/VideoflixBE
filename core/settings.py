@@ -137,6 +137,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Token validity for both account activation and password reset (24 hours)
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/

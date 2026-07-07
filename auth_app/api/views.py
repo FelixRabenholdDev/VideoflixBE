@@ -10,6 +10,7 @@ from auth_app.utils import (
     build_activation_link,
     build_registration_response,
     get_user_from_uidb64,
+    build_logo_url,
 )
 
 from .serializers import RegisterSerializer
@@ -22,12 +23,13 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return self._activate_and_respond(user)
+        return self._activate_and_respond(user, request)
 
-    def _activate_and_respond(self, user):
+    def _activate_and_respond(self, user, request):
         """Create the activation link, queue the email job, and return the response."""
         link, token = build_activation_link(user)
-        enqueue(send_activation_email, user.id, link)
+        logo_url = build_logo_url(request)
+        enqueue(send_activation_email, user.id, link, logo_url)
         data = build_registration_response(user, token)
         return Response(data, status=status.HTTP_201_CREATED)
 
