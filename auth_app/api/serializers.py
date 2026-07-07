@@ -58,3 +58,21 @@ class LoginSerializer(serializers.Serializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        """Check password confirmation match and password strength."""
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": GENERIC_ERROR})
+        self._validate_password_strength(attrs["new_password"])
+        return attrs
+
+    def _validate_password_strength(self, password):
+        """Run Django's built-in password validators."""
+        try:
+            validate_password(password)
+        except serializers.ValidationError:
+            raise serializers.ValidationError({"new_password": GENERIC_ERROR})

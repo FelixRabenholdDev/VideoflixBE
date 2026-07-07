@@ -1,5 +1,6 @@
 from django_rq import enqueue
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -20,9 +21,10 @@ from auth_app.utils import (
     set_auth_cookies,
     clear_auth_cookies,
     set_access_cookie,
+    get_user_from_uidb64,
 )
 
-from .serializers import RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer
+from .serializers import RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 
 User = get_user_model()
 
@@ -153,3 +155,27 @@ class PasswordResetRequestView(APIView):
         link = build_password_reset_link(user)
         logo_url = build_logo_url(request)
         enqueue(send_password_reset_email, user.id, link, logo_url)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, uidb64, token):
+        user = get_user_from_uidb64(uidb64)
+        if user is None or not default_token_generator.check_token(user, token):
+            return Response(
+                {"detail": "This reset link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return self._reset_password(user, request.data)
+
+    def _reset_password(self, user, data):
+        """Validate the new password and persist it for the given user."""
+        serializer = PasswordResetConfirmSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return Response(
+            {"detail": "Your Password has been successfully reset."},
+            status=status.HTTP_200_OK,
+        )
