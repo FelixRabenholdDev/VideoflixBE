@@ -97,3 +97,20 @@ def build_login_payload(user):
         "detail": "Login successful",
         "user": {"id": user.id, "username": user.email},
     }
+
+def clear_auth_cookies(response):
+    """Remove the access and refresh token cookies from the response."""
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return response
+
+def set_access_cookie(response, access_token):
+    """Attach only the new JWT access token as an HttpOnly cookie."""
+    response.set_cookie(
+        "access_token",
+        access_token,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+    )
+    return response

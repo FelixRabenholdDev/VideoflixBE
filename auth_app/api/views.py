@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 from auth_app.jobs import send_activation_email
 from auth_app.utils import (
@@ -14,6 +15,8 @@ from auth_app.utils import (
     build_logo_url,
     build_login_payload,
     set_auth_cookies,
+    clear_auth_cookies,
+    set_access_cookie,
 )
 
 from .serializers import RegisterSerializer, LoginSerializer
@@ -73,3 +76,53 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(user)
         response = Response(build_login_payload(user), status=status.HTTP_200_OK)
         return set_auth_cookies(response, str(refresh.access_token), str(refresh))
+
+
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh_token")
+        if refresh_token is None:
+            return Response(
+                {"detail": "Refresh token is missing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return self._blacklist_and_respond(refresh_token)
+
+    def _blacklist_and_respond(self, refresh_token):
+        """Blacklist the refresh token and clear auth cookies."""
+        try:
+            RefreshToken(refresh_token).blacklist()
+        except TokenError:
+            pass
+        response = Response(
+            {"detail": "Logout successful! All tokens will be deleted. Refresh token is now invalid."},
+            status=status.HTTP_200_OK,
+        )
+        return clear_auth_cookies(response)
+
+
+class TokenRefreshView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh_token")
+        if refresh_token is None:
+            return Response(
+                {"detail": "Refresh token is missing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return self._refresh_access_token(refresh_token)
+
+    def _refresh_access_token(self, refresh_token):
+        """Validate the refresh token and issue a new access token."""
+        try:
+            new_access = str(RefreshToken(refresh_token).access_token)
+        except TokenError:
+            return Response(
+                {"detail": "Refresh token is invalid or expired."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        response = Response({"detail": "Token refreshed", "access": new_access}, status=status.HTTP_200_OK)
+        return set_access_cookie(response, new_access)
