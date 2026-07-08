@@ -8,8 +8,6 @@ from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.templatetags.static import static
 
-from rest_framework_simplejwt.tokens import RefreshToken
-
 User = get_user_model()
 
 
