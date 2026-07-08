@@ -25,13 +25,14 @@ def _convert_single_resolution(source_path, output_dir, resolution):
     """Run the FFMPEG conversion for a single resolution. (Implement using FFMPEG's HLS docs.)"""
 
     manifest_path = output_dir / "index.m3u8"
-    cmd = _build_ffmpeg_command(source_path, manifest_path, resolution)
+    cmd = _build_ffmpeg_command(source_path, manifest_path, output_dir, resolution)
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"FFMPEG failed for {resolution}: {result.stderr}")
 
 def _build_ffmpeg_command(source_path, manifest_path, output_dir, resolution):
     """Build the FFMPEG command as an argument list for a given resolution."""
+    
     dimensions = RESOLUTION_DIMENSIONS[resolution]
     return [
         "ffmpeg", "-i", source_path,
