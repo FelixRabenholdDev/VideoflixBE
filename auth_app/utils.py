@@ -26,10 +26,11 @@ def build_logo_url(request):
 
 
 def build_activation_link(user):
-    """Build the activation link containing uidb64 and token."""
+    """Build the activation link containing uid and token as query parameters."""
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = account_activation_token.make_token(user)
-    return f"{settings.FRONTEND_URL}/activate/{uidb64}/{token}/", token
+    link = f"{settings.FRONTEND_URL}/pages/auth/activate.html?uid={uidb64}&token={token}"
+    return link, token
 
 
 def get_user_from_uidb64(uidb64):
@@ -57,10 +58,10 @@ def build_registration_response(user, token):
     }
 
 def build_password_reset_link(user):
-    """Build the password reset link containing uidb64 and token."""
+    """Build the password reset link containing uid and token as query parameters."""
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    return f"{settings.FRONTEND_URL}/reset-password/{uidb64}/{token}/"
+    return f"{settings.FRONTEND_URL}/pages/auth/confirm_password.html?uid={uidb64}&token={token}"
 
 
 def render_password_reset_email(user, reset_link, logo_url):
