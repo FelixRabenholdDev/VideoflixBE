@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from video_app.models import Video
-from video_app.utils import build_manifest_path, is_valid_resolution
+from video_app.utils import build_manifest_path, is_valid_resolution, build_segment_path
 
 from .serializers import VideoListSerializer
 
@@ -39,4 +39,26 @@ class VideoManifestView(APIView):
         path = build_manifest_path(movie_id, resolution)
         if not path.exists():
             raise Http404("Manifest not found.")
+        return path
+
+class VideoSegmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, movie_id, resolution, segment):
+        self._ensure_video_exists(movie_id)
+        segment_path = self._resolve_segment_path(movie_id, resolution, segment)
+        return FileResponse(open(segment_path, "rb"), content_type="video/MP2T")
+
+    def _ensure_video_exists(self, movie_id):
+        """Raise 404 if no video with the given id exists."""
+        if not Video.objects.filter(pk=movie_id).exists():
+            raise Http404("Video not found.")
+
+    def _resolve_segment_path(self, movie_id, resolution, segment):
+        """Raise 404 if the resolution is invalid or the segment file is missing/unsafe."""
+        if not is_valid_resolution(resolution):
+            raise Http404("Segment not found.")
+        path = build_segment_path(movie_id, resolution, segment)
+        if path is None or not path.exists():
+            raise Http404("Segment not found.")
         return path
