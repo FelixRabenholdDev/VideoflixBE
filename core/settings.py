@@ -158,6 +158,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+
 # E-Mail
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -202,3 +203,7 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Allow uploads up to ~250 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024
