@@ -8,7 +8,10 @@ from .models import Video
 
 @receiver(post_save, sender=Video)
 def video_post_save(sender, instance, created, **kwargs):
-    """Queue the HLS conversion job whenever a new video is uploaded."""
+    """Queue thumbnail generation and HLS conversion on creation, and
+    regenerate the thumbnail whenever it has been cleared afterwards."""
     if created:
         enqueue(generate_thumbnail, instance.id)
         enqueue(convert_video_to_hls, instance.id)
+    elif not instance.thumbnail:
+        enqueue(generate_thumbnail, instance.id)
