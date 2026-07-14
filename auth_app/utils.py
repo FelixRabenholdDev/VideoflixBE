@@ -113,3 +113,15 @@ def set_access_cookie(response, access_token):
         samesite="Lax",
     )
     return response
+
+EXTERNAL_LOGO_URL = (
+    "https://raw.githubusercontent.com/Developer-Akademie-Backendkurs/project.Videoflix/refs/heads/main/EmailTemplates_Backend/Logo.svg"
+)
+
+
+def build_logo_url(request):
+    """Return the email logo URL. Uses an external URL in local dev, since
+    localhost/127.0.0.1 links are unreachable from remote mail testing tools like Mailtrap."""
+    if settings.DEBUG:
+        return EXTERNAL_LOGO_URL
+    return request.build_absolute_uri(static("emails/logo.svg"))
