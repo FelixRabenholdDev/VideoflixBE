@@ -77,15 +77,15 @@ def set_auth_cookies(response, access_token, refresh_token):
         "access_token",
         access_token,
         httponly=True,
-        secure=not settings.DEBUG,
-        samesite="Lax",
+        secure=True,
+        samesite="None",
     )
     response.set_cookie(
         "refresh_token",
         refresh_token,
         httponly=True,
-        secure=not settings.DEBUG,
-        samesite="Lax",
+        secure=True,
+        samesite="None",
     )
     return response
 
@@ -109,8 +109,8 @@ def set_access_cookie(response, access_token):
         "access_token",
         access_token,
         httponly=True,
-        secure=not settings.DEBUG,
-        samesite="Lax",
+        secure=True,
+        samesite="None",
     )
     return response
 
