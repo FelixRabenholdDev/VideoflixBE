@@ -52,20 +52,30 @@ class ActivateAccountView(APIView):
 
     def get(self, request, uidb64, token):
         user = get_user_from_uidb64(uidb64)
-        if user is not None and account_activation_token.check_token(user, token):
-            return self._activate_user(user)
-        return Response(
-            {"message": "Activation failed."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        if user is None:
+            return self._activation_failed_response()
+        if user.is_active:
+            return self._activation_success_response()
+        return self._activate_if_token_valid(user, token)
 
-    def _activate_user(self, user):
-        """Mark the user as active and persist the change."""
+    def _activate_if_token_valid(self, user, token):
+        """Activate the user if the token is valid, otherwise return a failure response."""
+        if not account_activation_token.check_token(user, token):
+            return self._activation_failed_response()
         user.is_active = True
         user.save(update_fields=["is_active"])
+        return self._activation_success_response()
+
+    def _activation_success_response(self):
         return Response(
             {"message": "Account successfully activated."},
             status=status.HTTP_200_OK,
+        )
+
+    def _activation_failed_response(self):
+        return Response(
+            {"message": "Activation failed."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     
