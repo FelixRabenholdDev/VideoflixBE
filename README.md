@@ -95,8 +95,11 @@ This project is designed to run entirely via Docker. All dependencies (PostgreSQ
    | `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_LOCATION` | Redis connection (used for caching and RQ) |
    | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL` | SMTP configuration for sending emails |
    | `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, `DJANGO_SUPERUSER_PASSWORD` | Auto-created superuser on first start |
+   | `GUNICORN_CMD_ARGS` (optional) | Extra Gunicorn arguments, e.g. `--timeout 300 --workers 3` to allow large video uploads without hitting the default 30s worker timeout |
 
    For local development, an [SMTP testing service](https://mailtrap.io) is recommended for the email settings so no real emails are sent to real inboxes.
+
+   **Note:** email templates include a logo image. In local development (`DEBUG=True`), an externally hosted logo URL is used instead of the local static file, since `localhost`/`127.0.0.1` URLs are not reachable by remote mail testing tools such as Mailtrap. In production (`DEBUG=False`), the logo is served from the app's own static files.
 
 3. **Build and start the containers**
    ```bash
@@ -162,12 +165,19 @@ Supported resolutions: `480p`, `720p`, `1080p`.
 
 ## Video Processing (HLS)
 
-When a new `Video` object is created (e.g. via the Django admin), a background job is automatically queued that converts the uploaded video file into multiple HLS resolutions using FFmpeg. Converted files are stored under:
+When a new `Video` object is created (e.g. via the Django admin), two background jobs are automatically queued:
+
+- **Thumbnail generation** – a still frame is extracted from the 2-second mark of the uploaded video via FFmpeg and saved as the video's thumbnail. The `thumbnail` field is therefore optional at creation time and gets populated shortly after upload.
+- **HLS conversion** – the video is transcoded into multiple resolutions using FFmpeg. Converted files are stored under:
 
 ```
 media/hls/<video_id>/<resolution>/index.m3u8
 media/hls/<video_id>/<resolution>/segment_XXX.ts
 ```
+
+The `category` field is restricted to a fixed set of choices (`Drama`, `Romance`, `Comedy`, `Action`, `Documentary`), enforced at the model level and rendered as a dropdown in the Django admin.
+
+**Note on large uploads:** uploading videos (e.g. above ~100 MB) requires a sufficiently high Gunicorn worker timeout and Django upload size limit — see the `GUNICORN_CMD_ARGS` and `DATA_UPLOAD_MAX_MEMORY_SIZE`/`FILE_UPLOAD_MAX_MEMORY_SIZE` settings.
 
 ## Background Jobs (Django RQ)
 
